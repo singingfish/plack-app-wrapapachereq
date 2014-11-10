@@ -4,16 +4,17 @@ use strict;
 use warnings;
 
 use Plack::Util;
-use Plack::Util::Accessor qw( authen_handler authz_handler response_handler handler dir_config root logger request_args);
-use Plack::App::FakeApache::Request;
+use Plack::Util::Accessor qw( authen_handler authz_handler response_handler handler dir_config root logger request_args request_class);
+# use Plack::App::FakeApache::Request;
 use parent qw( Plack::Component );
 use attributes;
 
 use Carp;
+use Module::Load;
 use Scalar::Util qw( blessed );
 use Apache2::Const qw(OK DECLINED HTTP_OK HTTP_UNAUTHORIZED HTTP_NOT_FOUND);
 
-our $VERSION = 0.04;
+our $VERSION = 0.05;
 
 sub _get_phase_handlers
 {
@@ -58,7 +59,8 @@ sub call {
         $args{log} ||= Plack::FakeApache::Log->new( logger => sub { print $logger @_ } );
     }
 
-    my $fake_req = Plack::App::FakeApache::Request->new(%args);
+	my $fake_req_class = $self->request_class || 'Plack::App::FakeApache::Request';
+    my $fake_req = $fake_req_class->new(%args);
 
     my $status = $self->_run_handlers($fake_req);
 
@@ -94,6 +96,8 @@ sub _run_handlers
 
 sub prepare_app {
     my $self = shift;
+	my $req_class = $self->request_class || 'Plack::App::FakeApache::Request';
+	load $req_class;
 
     $self->response_handler($self->response_handler || $self->handler);
 
@@ -113,7 +117,8 @@ sub prepare_app {
 	my $new = CGI->can('new');
 	no warnings qw(redefine);
 	*CGI::new = sub {
-		if (blessed($_[1]) and $_[1]->isa('Plack::App::FakeApache::Request'))
+		my $fake_request_class = $self->fake_request_class || 'Plack::App::FakeApache::Request';
+		if (blessed($_[1]) and $_[1]->isa($fake_request_class))
 		{
 			return $new->(CGI => $_[1]->env->{QUERY_STRING} || $_[1]->plack_request->content);
 		}
@@ -202,6 +207,14 @@ added on a need to have basis.
 Handlers for the respective request phases. Pass a blessed object, a class
 name or use the C<Class-E<gt>method> syntax. See the mod_perl docs for calling
 conventions.
+
+=request_class
+
+If you want to subclass Plack::App::FakeApache::Request do so here.
+Make sure that your subclass inherits from
+Plack::App::FakeApache::Request (duh).  This is for use in situations
+where you've subclasssed Apache2::Request and want to make it work
+under PSGI.
 
 =item dir_config
 
