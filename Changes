@@ -1,5 +1,7 @@
 Changes for Plack::App::FakeApache
 
+0.05 - Allow Plack::App::FakeApache to use a subclass of Plack::App::FakeApache::Request
+
 0.04 - Fix README in release and add files missing from 0.03 CPAN Dist 
        (forgot ./Build manifest)
 
