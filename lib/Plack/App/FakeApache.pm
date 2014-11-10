@@ -5,7 +5,7 @@ use warnings;
 
 use Plack::Util;
 use Plack::Util::Accessor qw( authen_handler authz_handler response_handler handler dir_config root logger request_args request_class);
-# use Plack::App::FakeApache::Request;
+
 use parent qw( Plack::Component );
 use attributes;
 
