@@ -33,10 +33,12 @@ sub _run_first
 	my $phase = shift;
 	my $fake_req = shift;
 	my $fallback_status = shift;
+
 	my $status = OK;
 	foreach my $handler ($self->_get_phase_handlers($phase))
 	{
 		$status = $handler->($fake_req);
+		$DB::single=1;
 		last if $status != DECLINED;
 	}
 	return (defined($status) and $status != DECLINED) ? $status : $fallback_status; # mod_perl seems to do this if all handlers decline
