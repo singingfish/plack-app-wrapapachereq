@@ -60,8 +60,8 @@ sub call {
         $args{log} ||= Plack::FakeApache::Log->new( logger => sub { print $logger @_ } );
     }
 
-    my $fake_req_class = $self->request_class || 'Plack::App::FakeApache::Request';
-    my $fake_req = $fake_req_class->new(%args);
+    my $request_class = $self->request_class || 'Plack::App::FakeApache::Request';
+    my $fake_req = $request_class->new(%args);
 
     my $status = $self->_run_handlers($fake_req);
 
@@ -97,8 +97,8 @@ sub _run_handlers
 
 sub prepare_app {
     my $self = shift;
-    my $req_class = $self->request_class || 'Plack::App::FakeApache::Request';
-    load $req_class;
+    my $request_class = $self->request_class || 'Plack::App::FakeApache::Request';
+    load $request_class;
 
     $self->response_handler($self->response_handler || $self->handler);
 
@@ -118,8 +118,8 @@ sub prepare_app {
     my $new = CGI->can('new');
     no warnings qw(redefine);
     *CGI::new = sub {
-        my $fake_request_class = $self->fake_request_class || 'Plack::App::FakeApache::Request';
-        if (blessed($_[1]) and $_[1]->isa($fake_request_class))
+        my $request_class = $self->request_class || 'Plack::App::FakeApache::Request';
+        if (blessed($_[1]) and $_[1]->isa($request_class))
         {
             return $new->(CGI => $_[1]->env->{QUERY_STRING} || $_[1]->plack_request->content);
         }
