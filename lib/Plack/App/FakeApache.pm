@@ -49,6 +49,7 @@ sub call {
     my %args = (
         env => $env,
         dir_config => $self->dir_config,
+        request_class => $self->request_class || 'Plack::App::FakeApache::Request',
         %{$self->request_args || {}}
     );
 
@@ -59,8 +60,7 @@ sub call {
         $args{log} = $logger if blessed($logger) and !$logger->isa('IO::Handle');
         $args{log} ||= Plack::FakeApache::Log->new( logger => sub { print $logger @_ } );
     }
-
-    my $request_class = $self->request_class || 'Plack::App::FakeApache::Request';
+    my $request_class = $args{request_class};
     my $fake_req = $request_class->new(%args);
 
     my $status = $self->_run_handlers($fake_req);
