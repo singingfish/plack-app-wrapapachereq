@@ -18,29 +18,29 @@ our $VERSION = 0.05;
 
 sub _get_phase_handlers
 {
-	my $self = shift;
-	my $phase = shift;
-	my $accessor = $phase.'_handler';
-	my $handlers = $self->$accessor or return;
-	return @{$handlers};
+    my $self = shift;
+    my $phase = shift;
+    my $accessor = $phase.'_handler';
+    my $handlers = $self->$accessor or return;
+    return @{$handlers};
 }
 
 # RUN_FIRST
 # Run until a handler returns something other than DECLINED...
 sub _run_first
 {
-	my $self = shift;
-	my $phase = shift;
-	my $fake_req = shift;
-	my $fallback_status = shift;
+    my $self = shift;
+    my $phase = shift;
+    my $fake_req = shift;
+    my $fallback_status = shift;
 
-	my $status = OK;
-	foreach my $handler ($self->_get_phase_handlers($phase))
-	{
-		$status = $handler->($fake_req);
-		last if $status != DECLINED;
-	}
-	return (defined($status) and $status != DECLINED) ? $status : $fallback_status; # mod_perl seems to do this if all handlers decline
+    my $status = OK;
+    foreach my $handler ($self->_get_phase_handlers($phase))
+    {
+        $status = $handler->($fake_req);
+        last if $status != DECLINED;
+    }
+    return (defined($status) and $status != DECLINED) ? $status : $fallback_status; # mod_perl seems to do this if all handlers decline
 }
 
 sub call {
@@ -60,96 +60,96 @@ sub call {
         $args{log} ||= Plack::FakeApache::Log->new( logger => sub { print $logger @_ } );
     }
 
-	my $fake_req_class = $self->request_class || 'Plack::App::FakeApache::Request';
+    my $fake_req_class = $self->request_class || 'Plack::App::FakeApache::Request';
     my $fake_req = $fake_req_class->new(%args);
 
     my $status = $self->_run_handlers($fake_req);
 
-	$fake_req->status($status == OK ? HTTP_OK : $status);
+    $fake_req->status($status == OK ? HTTP_OK : $status);
     return $fake_req->finalize;
 }
 
 sub _run_handlers
 {
-	my $self = shift;
-	my $fake_req = shift;
-	my $status;
+    my $self = shift;
+    my $fake_req = shift;
+    my $status;
 
-	# TODO: More request phases here...
+    # TODO: More request phases here...
 
-	$status = $self->_run_first('authen', $fake_req, HTTP_UNAUTHORIZED);
-	return $status if $status != OK;
+    $status = $self->_run_first('authen', $fake_req, HTTP_UNAUTHORIZED);
+    return $status if $status != OK;
 
-	$status = $self->_run_first('authz', $fake_req, HTTP_UNAUTHORIZED);
-	return $status if $status != OK;
+    $status = $self->_run_first('authz', $fake_req, HTTP_UNAUTHORIZED);
+    return $status if $status != OK;
 
     # we wrap the call to $handler->( ... ) in tie statements so 
     # prints, etc are caught and sent to the right place
     tie *STDOUT, "Plack::App::FakeApache::Tie", $fake_req;
-	$status = $self->_run_first('response', $fake_req, HTTP_NOT_FOUND);
+    $status = $self->_run_first('response', $fake_req, HTTP_NOT_FOUND);
     untie *STDOUT;
-	return $status if $status != OK;
+    return $status if $status != OK;
 
-	# TODO: More request phases here...
+    # TODO: More request phases here...
 
-	return OK;
+    return OK;
 }
 
 sub prepare_app {
     my $self = shift;
-	my $req_class = $self->request_class || 'Plack::App::FakeApache::Request';
-	load $req_class;
+    my $req_class = $self->request_class || 'Plack::App::FakeApache::Request';
+    load $req_class;
 
     $self->response_handler($self->response_handler || $self->handler);
 
-	foreach my $accessor ( qw(authen_handler authz_handler response_handler) )
-	{
-		my $handlers = $self->$accessor or next;
-		my @handlers = ref($handlers) eq 'ARRAY' ? @{$handlers} : ($handlers);
-		@handlers = map({ $self->_massage_handler($_) } @handlers);
-		$self->$accessor([ @handlers ]);
-	}
+    foreach my $accessor ( qw(authen_handler authz_handler response_handler) )
+    {
+        my $handlers = $self->$accessor or next;
+        my @handlers = ref($handlers) eq 'ARRAY' ? @{$handlers} : ($handlers);
+        @handlers = map({ $self->_massage_handler($_) } @handlers);
+        $self->$accessor([ @handlers ]);
+    }
 
     carp "handler or response_handler not defined" unless $self->response_handler;
 
-	# Workaround for mod_perl handlers doing CGI->new($r). CGI doesn't
-	# know our fake request class, so we hijack CGI->new() and explicitly
-	# pass the request query string instead...
-	my $new = CGI->can('new');
-	no warnings qw(redefine);
-	*CGI::new = sub {
-		my $fake_request_class = $self->fake_request_class || 'Plack::App::FakeApache::Request';
-		if (blessed($_[1]) and $_[1]->isa($fake_request_class))
-		{
-			return $new->(CGI => $_[1]->env->{QUERY_STRING} || $_[1]->plack_request->content);
-		}
-		return $new->(@_);
-	};
+    # Workaround for mod_perl handlers doing CGI->new($r). CGI doesn't
+    # know our fake request class, so we hijack CGI->new() and explicitly
+    # pass the request query string instead...
+    my $new = CGI->can('new');
+    no warnings qw(redefine);
+    *CGI::new = sub {
+        my $fake_request_class = $self->fake_request_class || 'Plack::App::FakeApache::Request';
+        if (blessed($_[1]) and $_[1]->isa($fake_request_class))
+        {
+            return $new->(CGI => $_[1]->env->{QUERY_STRING} || $_[1]->plack_request->content);
+        }
+        return $new->(@_);
+    };
 
     return;
 }
 
 sub _massage_handler
 {
-	my $self = shift;
-	my $handler = shift;
-	my ($class, $method);
+    my $self = shift;
+    my $handler = shift;
+    my ($class, $method);
     if ( blessed $handler ) {
         $handler = sub { $handler->handler( @_ ) };
     } elsif ( my ($class, $method) = $handler =~ m/(.+)->(.+)/ ) {
-		Plack::Util::load_class( $class );
-		$handler = sub { $class->$method( @_ ) };
-	} else {
-		my $class  = $handler;
-		Plack::Util::load_class( $class );
-		my $method = eval { $class->can("handler") };
+        Plack::Util::load_class( $class );
+        $handler = sub { $class->$method( @_ ) };
+    } else {
+        my $class  = $handler;
+        Plack::Util::load_class( $class );
+        my $method = eval { $class->can("handler") };
         if ( grep { $_ eq 'method' } attributes::get($method) ) {
             $handler = sub { $class->handler( @_ ) };
         } else {
             $handler = $method;
         }
     }
-	return $handler;
+    return $handler;
 }
 
 package Plack::App::FakeApache::Tie;
