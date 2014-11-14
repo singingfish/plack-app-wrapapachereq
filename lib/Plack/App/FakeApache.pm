@@ -5,6 +5,7 @@ use warnings;
 
 use Plack::Util;
 use Plack::Util::Accessor qw( authen_handler authz_handler response_handler handler dir_config root logger request_args request_class);
+use CGI::Emulate::PSGI;
 
 use parent qw( Plack::Component );
 use attributes;
@@ -33,6 +34,18 @@ sub _run_first
     my $phase = shift;
     my $fake_req = shift;
     my $fallback_status = shift;
+
+
+	# NOTE.  I don't think this will mess people around who don't use
+	# CGI, but if it does this could be conditionally applied with a
+	# boolean $fake_req->shim_cgi_brain_damage or something.
+
+	# Mangle env to cope with certain kinds of CGI brain damage.
+	my $env = $fake_req->plack_request->env;
+	local %ENV = (%ENV, CGI::Emulate::PSGI->emulate_environment($env));
+	# and stdin!
+	local *STDIN  = $env->{'psgi.input'};
+
 
     my $status = OK;
     foreach my $handler ($self->_get_phase_handlers($phase))
@@ -119,8 +132,8 @@ sub prepare_app {
     no warnings qw(redefine);
     *CGI::new = sub {
         my $request_class = $self->request_class || 'Plack::App::FakeApache::Request';
-        if (blessed($_[1]) and $_[1]->isa($request_class))
-        {
+
+        if (blessed($_[1]) and $_[1]->isa($request_class)) {
             return $new->(CGI => $_[1]->env->{QUERY_STRING} || $_[1]->plack_request->content);
         }
         return $new->(@_);
