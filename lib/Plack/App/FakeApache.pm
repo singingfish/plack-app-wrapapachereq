@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Plack::Util;
-use Plack::Util::Accessor qw( authen_handler authz_handler response_handler handler dir_config root logger request_args request_class);
-use CGI::Emulate::PSGI;
+use Plack::Util::Accessor qw( authen_handler authz_handler response_handler handler dir_config root logger request_args request_class using_cgi_psgi);
+
 
 use parent qw( Plack::Component );
 use attributes;
@@ -42,9 +42,12 @@ sub _run_first
 
 	# Mangle env to cope with certain kinds of CGI brain damage.
 	my $env = $fake_req->plack_request->env;
-	local %ENV = (%ENV, CGI::Emulate::PSGI->emulate_environment($env));
-	# and stdin!
-	local *STDIN  = $env->{'psgi.input'};
+	unless ($self->using_cgi_psgi) {
+		require CGI::Emulate::PSGI;
+		local %ENV = (%ENV, CGI::Emulate::PSGI->emulate_environment($env));
+		# and stdin!
+		local *STDIN  = $env->{'psgi.input'};
+	}
 
 
     my $status = OK;
