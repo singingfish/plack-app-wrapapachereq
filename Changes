@@ -1,6 +1,9 @@
 Changes for Plack::App::FakeApache
+
 0.08 - without_cgi configuration to make factoring CGI.pm out of a
        codebase possible.
+       Port to Moo
+       Port to dzil
 
 0.07 - Change repo address
 

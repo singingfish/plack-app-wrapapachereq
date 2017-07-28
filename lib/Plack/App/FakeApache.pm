@@ -374,8 +374,7 @@ time RSN.
 
 =head1 AUTHOR
 
+Kieren Diment L<zarquon@cpan.org>.
 Peter Makholm, L<peter@makholm.net>
-
-Override subrequest, more cgi.pm support and exit support by Kieren Diment L<zarquon@cpan.org>.
 
 =cut
