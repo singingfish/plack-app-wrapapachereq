@@ -1,5 +1,7 @@
 Changes for Plack::App::FakeApache
 
+0.09 - Moo port to be released fully.
+
 0.08 - without_cgi configuration to make factoring CGI.pm out of a
        codebase possible.
        Port to Moo
